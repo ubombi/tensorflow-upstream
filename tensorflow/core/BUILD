@@ -1446,6 +1446,7 @@ cc_library(
     name = "all_kernels_impl",
     visibility = ["//tensorflow/core:__subpackages__"],
     deps = [
+        "//tensorflow/c/kernels:bitcast_op",
         "//tensorflow/core/kernels:array",
         "//tensorflow/core/kernels:audio",
         "//tensorflow/core/kernels:batch_kernels",
@@ -1671,7 +1672,6 @@ filegroup(
         ":protos_all_proto_text_srcs",
         ":error_codes_proto_text_srcs",
         "//tensorflow/core/platform/default/build_config:android_srcs",
-        "//tensorflow/c:srcs",
     ] + glob(
         [
             "client/**/*.cc",
@@ -1705,6 +1705,7 @@ filegroup(
             "platform/**/logger.cc",
             "platform/default/test_benchmark.*",
             "platform/cuda.h",
+            "platform/rocm.h",
             "platform/google/**/*",
             "platform/hadoop/**/*",
             "platform/gif.h",
@@ -1731,6 +1732,7 @@ filegroup(
         "//tensorflow/core/kernels:android_srcs",
         "//tensorflow/core/util/ctc:android_srcs",
         "//tensorflow/core/util/tensor_bundle:android_srcs",
+        "//tensorflow/c:srcs",
     ] + glob(
         [
             "common_runtime/**/*.h",
@@ -2177,6 +2179,18 @@ tf_proto_library(
     ],
 )
 
+tf_proto_library(
+    name = "conv_autotuning_proto",
+    srcs = ["protobuf/conv_autotuning.proto"],
+    cc_api_version = 2,
+    default_header = True,
+    protodeps = tf_additional_all_protos(),
+    provide_cc_alias = True,
+    visibility = [
+        "//tensorflow:internal",
+    ],
+)
+
 tf_proto_library_cc(
     name = "worker_proto",
     srcs = ["protobuf/worker.proto"],
@@ -2246,6 +2260,7 @@ LIB_INTERNAL_PRIVATE_HEADERS = ["framework/resource_handle.h"] + glob(
         "platform/jpeg.h",
         "platform/png.h",
         "platform/**/cuda.h",
+        "platform/**/rocm.h",
         "platform/**/stream_executor.h",
     ],
 )
@@ -2358,6 +2373,7 @@ cc_library(
             "**/*test*",
             "platform/**/cuda.h",
             "platform/**/cuda_libdevice_path.cc",
+            "platform/**/rocm.h",
             "platform/**/stream_executor.h",
             "platform/**/env_time.cc",
             "platform/**/device_tracer.cc",
@@ -2477,12 +2493,6 @@ cc_library(
 
 cc_library(
     name = "tflite_portable_logging",
-    srcs = [
-    ] + if_ios([
-        "platform/default/logging.cc",
-        "platform/env_time.cc",
-        "platform/posix/env_time.cc",
-    ]),
     hdrs = [
         "lib/bfloat16/bfloat16.h",
         "platform/default/integral_types.h",
@@ -2491,10 +2501,11 @@ cc_library(
         "platform/macros.h",
         "platform/platform.h",
         "platform/types.h",
-    ] + if_windows(["platform/windows/integral_types.h"]) + if_ios(["platform/env_time.h"]),
+    ],
     copts = tf_copts(),
     linkopts = ["-ldl"],
     deps = [
+        ":platform_base",
         "//tensorflow/core/platform/default/build_config:logging",
     ],
 )
@@ -2858,6 +2869,7 @@ tf_cuda_library(
     srcs = ["platform/stream_executor.h"],
     hdrs = [
         "platform/cuda.h",
+        "platform/rocm.h",
         "platform/stream_executor.h",
     ],
     deps = [
@@ -3293,7 +3305,7 @@ cc_library(
 )
 
 GPU_RUNTIME_HEADERS = [
-    "common_runtime/gpu/cuda_host_allocator.h",
+    "common_runtime/gpu/gpu_host_allocator.h",
     "common_runtime/gpu/gpu_bfc_allocator.h",
     "common_runtime/gpu/gpu_cudamalloc_allocator.h",
     "common_runtime/gpu/gpu_debug_allocator.h",
